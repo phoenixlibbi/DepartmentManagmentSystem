@@ -12,17 +12,25 @@ namespace MS.Models
         public string Name { get; set; }
 
         [Required]
-        public string RollNumber { get; set; }
+        [StringLength(4)]
+        public string Session { get; set; }
+
+        [Required]
+        [StringLength(10)]
+        public string Degree { get; set; }
 
         [Required]
         [Phone]
+        [StringLength(15)]
         public string Phone { get; set; }
 
         [Required]
         [EmailAddress]
+        [StringLength(100)]
         public string Email { get; set; }
 
         [Required]
+        [StringLength(200)]
         public string Address { get; set; }
 
         [Required]
@@ -30,19 +38,16 @@ namespace MS.Models
         public int Age { get; set; }
 
         [Required]
+        [StringLength(10)]
         public string Gender { get; set; }
 
         [Required]
         [StringLength(15)]
         public string CNIC { get; set; }
 
-        [Required]
-        public string Session { get; set; }
+        [StringLength(20)]
+        public string? RollNumber { get; set; }
 
-        [Required]
-        public string Degree { get; set; }
-
-        // Navigation property for exams
-        public virtual ICollection<ExamSeating> ExamSeatings { get; set; }
+        public virtual ICollection<ExamSeating>? ExamSeatings { get; set; }
     }
 } 

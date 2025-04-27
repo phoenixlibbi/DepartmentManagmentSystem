@@ -109,3 +109,4 @@ D:\eadProject\MS\bin\Debug\net8.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.reso
 D:\eadProject\MS\obj\Debug\net8.0\MS.csproj.AssemblyReference.cache
 D:\eadProject\MS\obj\Debug\net8.0\MS.MvcApplicationPartsAssemblyInfo.cs
 D:\eadProject\MS\obj\Debug\net8.0\MS.csproj.Up2Date
+D:\eadProject\MS\obj\Debug\net8.0\MS.sourcelink.json
