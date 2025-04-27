@@ -1,0 +1,175 @@
+@model IEnumerable<MS.Models.ExamSeating>
+
+@{
+    ViewData["Title"] = "Exam Management";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">Exam Management</h1>
+            <p class="lead">Manage exam seating arrangements and generate reports</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Arrange New Exam</h5>
+                </div>
+                <div class="card-body">
+                    <form id="arrangeExamForm" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Session</label>
+                            <select class="form-select" id="session" required>
+                                <option value="">Select Session</option>
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Degree</label>
+                            <select class="form-select" id="degree" required>
+                                <option value="">Select Degree</option>
+                                <option value="CS">Computer Science</option>
+                                <option value="SE">Software Engineering</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Course</label>
+                            <select class="form-select" id="course" required>
+                                <option value="">Select Course</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Room</label>
+                            <select class="form-select" id="room" required>
+                                <option value="">Select Room</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Exam Date</label>
+                            <input type="date" class="form-control" id="examDate" required>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Arrange Seating
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Recent Exam Arrangements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Room</th>
+                                    <th>Date</th>
+                                    <th>Students</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="examList">
+                                <!-- Exam list will be populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Load courses when degree is selected
+            $('#degree').change(function() {
+                var degree = $(this).val();
+                if (degree) {
+                    $.get('/api/Exam/courses', { degree: degree }, function(courses) {
+                        $('#course').empty().append('<option value="">Select Course</option>');
+                        courses.forEach(function(course) {
+                            $('#course').append(`<option value="${course.id}">${course.code} - ${course.name}</option>`);
+                        });
+                    });
+                }
+            });
+
+            // Load available rooms
+            $.get('/api/Exam/rooms', function(rooms) {
+                $('#room').empty().append('<option value="">Select Room</option>');
+                rooms.forEach(function(room) {
+                    $('#room').append(`<option value="${room.id}">${room.roomNumber} (Capacity: ${room.capacity})</option>`);
+                });
+            });
+
+            // Handle form submission
+            $('#arrangeExamForm').submit(function(e) {
+                e.preventDefault();
+                var data = {
+                    session: $('#session').val(),
+                    degree: $('#degree').val(),
+                    courseId: $('#course').val(),
+                    roomId: $('#room').val(),
+                    examDate: $('#examDate').val()
+                };
+
+                $.post('/api/Exam/arrange-seating', data, function(result) {
+                    if (result) {
+                        alert('Exam seating arranged successfully!');
+                        loadExamList();
+                    }
+                });
+            });
+
+            // Load exam list
+            function loadExamList() {
+                $.get('/api/Exam/list', function(exams) {
+                    $('#examList').empty();
+                    exams.forEach(function(exam) {
+                        $('#examList').append(`
+                            <tr>
+                                <td>${exam.courseCode} - ${exam.courseName}</td>
+                                <td>${exam.roomNumber}</td>
+                                <td>${new Date(exam.examDate).toLocaleDateString()}</td>
+                                <td>${exam.studentCount}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="viewSeatingPlan(${exam.id})">
+                                        <i class="fas fa-chair"></i> Seating Plan
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="downloadAttendanceSheet(${exam.id})">
+                                        <i class="fas fa-download"></i> Attendance
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                });
+            }
+
+            // Initial load
+            loadExamList();
+        });
+
+        function viewSeatingPlan(examId) {
+            window.open(`/api/Exam/seating-plan-pdf?examId=${examId}`, '_blank');
+        }
+
+        function downloadAttendanceSheet(examId) {
+            window.open(`/api/Exam/attendance-sheet-pdf?examId=${examId}`, '_blank');
+        }
+    </script>
+} 

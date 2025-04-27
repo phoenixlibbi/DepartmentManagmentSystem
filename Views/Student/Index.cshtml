@@ -1,0 +1,95 @@
+@model IEnumerable<MS.Models.Student>
+
+@{
+    ViewData["Title"] = "Students";
+}
+
+<div class="container">
+    <h2>Students</h2>
+    <p>
+        <a asp-action="Create" class="btn btn-primary">Create New</a>
+    </p>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" id="sessionFilter" class="form-control" placeholder="Filter by Session">
+                <input type="text" id="degreeFilter" class="form-control" placeholder="Filter by Degree">
+                <button onclick="filterStudents()" class="btn btn-outline-secondary">Filter</button>
+                <button onclick="clearFilters()" class="btn btn-outline-secondary">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Roll Number</th>
+                <th>Name</th>
+                <th>Session</th>
+                <th>Degree</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="studentsTableBody">
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.RollNumber</td>
+                    <td>@item.Name</td>
+                    <td>@item.Session</td>
+                    <td>@item.Degree</td>
+                    <td>@item.Phone</td>
+                    <td>@item.Email</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Details</a>
+                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        function filterStudents() {
+            const session = document.getElementById('sessionFilter').value;
+            const degree = document.getElementById('degreeFilter').value;
+            
+            fetch(`/api/Student/filter?session=${session}&degree=${degree}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('studentsTableBody');
+                    tbody.innerHTML = '';
+                    
+                    data.forEach(student => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${student.rollNumber}</td>
+                                <td>${student.name}</td>
+                                <td>${student.session}</td>
+                                <td>${student.degree}</td>
+                                <td>${student.phone}</td>
+                                <td>${student.email}</td>
+                                <td>
+                                    <a href="/Student/Edit/${student.id}" class="btn btn-sm btn-warning">Edit</a>
+                                    <a href="/Student/Details/${student.id}" class="btn btn-sm btn-info">Details</a>
+                                    <a href="/Student/Delete/${student.id}" class="btn btn-sm btn-danger">Delete</a>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+
+        function clearFilters() {
+            document.getElementById('sessionFilter').value = '';
+            document.getElementById('degreeFilter').value = '';
+            filterStudents();
+        }
+    </script>
+} 
