@@ -24,8 +24,6 @@
                             <label class="form-label">Session</label>
                             <select class="form-select" id="session" required>
                                 <option value="">Select Session</option>
-                                <option value="2023">2023</option>
-                                <option value="2024">2024</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -95,6 +93,14 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
+            // Load available sessions
+            $.get('/api/Exam/sessions', function(sessions) {
+                $('#session').empty().append('<option value="">Select Session</option>');
+                sessions.forEach(function(session) {
+                    $('#session').append(`<option value="${session.value}">${session.text}</option>`);
+                });
+            });
+
             // Load courses when degree is selected
             $('#degree').change(function() {
                 var degree = $(this).val();
@@ -127,10 +133,31 @@
                     examDate: $('#examDate').val()
                 };
 
-                $.post('/api/Exam/arrange-seating', data, function(result) {
-                    if (result) {
-                        alert('Exam seating arranged successfully!');
-                        loadExamList();
+                $.ajax({
+                    url: '/api/Exam/arrange-seating',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            loadExamList();
+                            // Reset form
+                            $('#arrangeExamForm')[0].reset();
+                            // Reload rooms to update availability
+                            $.get('/api/Exam/rooms', function(rooms) {
+                                $('#room').empty().append('<option value="">Select Room</option>');
+                                rooms.forEach(function(room) {
+                                    $('#room').append(`<option value="${room.id}">${room.roomNumber} (Capacity: ${room.capacity})</option>`);
+                                });
+                            });
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        var response = xhr.responseJSON;
+                        alert('Error: ' + (response?.message || 'Failed to arrange seating'));
                     }
                 });
             });

@@ -1,0 +1,28 @@
+@model List<int>
+
+@{
+    ViewData["Title"] = "Years";
+}
+
+<div class="container mt-4">
+    <h1>Years from 2000 to @DateTime.Now.Year</h1>
+    
+    <div class="row mt-4">
+        @foreach (var year in Model)
+        {
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">@year</h5>
+                        <p class="card-text">
+                            @if (year == DateTime.Now.Year)
+                            {
+                                <span class="badge bg-primary">Current Year</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div> 

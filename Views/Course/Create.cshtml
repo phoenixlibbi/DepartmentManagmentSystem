@@ -9,27 +9,29 @@
 
     <div class="row">
         <div class="col-md-6">
-            <form asp-action="Create" method="post">
+            <form asp-action="Create" asp-controller="Course" method="post" id="createCourseForm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
                 <div class="form-group mb-3">
                     <label asp-for="Code" class="control-label"></label>
-                    <input asp-for="Code" class="form-control" required />
+                    <input asp-for="Code" class="form-control" />
                     <span asp-validation-for="Code" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mb-3">
                     <label asp-for="Name" class="control-label"></label>
-                    <input asp-for="Name" class="form-control" required />
+                    <input asp-for="Name" class="form-control" />
                     <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mb-3">
                     <label asp-for="CreditHours" class="control-label"></label>
-                    <input asp-for="CreditHours" type="number" min="1" max="6" class="form-control" required />
+                    <input asp-for="CreditHours" type="number" min="1" max="6" class="form-control" />
                     <span asp-validation-for="CreditHours" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mt-3">
-                    <input type="submit" value="Create" class="btn btn-primary" />
+                    <button type="submit" class="btn btn-primary">Create</button>
                     <a asp-action="Index" class="btn btn-secondary">Back to List</a>
                 </div>
             </form>
@@ -39,4 +41,30 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            $("#createCourseForm").on("submit", function(e) {
+                e.preventDefault();
+                
+                var formData = $(this).serialize();
+                
+                $.ajax({
+                    url: '@Url.Action("Create", "Course")',
+                    type: 'POST',
+                    data: formData,
+                    success: function(result) {
+                        if (result.success) {
+                            window.location.href = '@Url.Action("Index", "Course")';
+                        } else {
+                            window.location.reload();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error:", error);
+                        alert("An error occurred while creating the course. Please try again.");
+                    }
+                });
+            });
+        });
+    </script>
 } 

@@ -1,0 +1,135 @@
+@model MS.Controllers.DatabaseDataViewModel
+
+@{
+    ViewData["Title"] = "Database Data";
+}
+
+<div class="container mt-4">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <h1>Database Data</h1>
+
+    <div class="mt-4">
+        <h2>Courses</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Credit Hours</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var course in Model.Courses)
+                {
+                    <tr>
+                        <td>@course.Id</td>
+                        <td>@course.Code</td>
+                        <td>@course.Name</td>
+                        <td>@course.CreditHours</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <h2>Rooms</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Room Number</th>
+                    <th>Capacity</th>
+                    <th>Is Booked</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var room in Model.Rooms)
+                {
+                    <tr>
+                        <td>@room.Id</td>
+                        <td>@room.RoomNumber</td>
+                        <td>@room.Capacity</td>
+                        <td>@room.IsBooked</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <h2>Students</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Roll Number</th>
+                    <th>Session</th>
+                    <th>Degree</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var student in Model.Students)
+                {
+                    <tr>
+                        <td>@student.Id</td>
+                        <td>@student.Name</td>
+                        <td>@student.RollNumber</td>
+                        <td>@student.Session</td>
+                        <td>@student.Degree</td>
+                        <td>@student.Email</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <h2>Exam Seatings</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Course</th>
+                    <th>Room</th>
+                    <th>Student</th>
+                    <th>Seat Number</th>
+                    <th>Exam Date</th>
+                    <th>Is Present</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var seating in Model.ExamSeatings)
+                {
+                    <tr>
+                        <td>@seating.Id</td>
+                        <td>@seating.Course.Name</td>
+                        <td>@seating.Room.RoomNumber</td>
+                        <td>@seating.Student.Name</td>
+                        <td>@seating.SeatNumber</td>
+                        <td>@seating.ExamDate.ToString("yyyy-MM-dd")</td>
+                        <td>@seating.IsPresent</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div> 

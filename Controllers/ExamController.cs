@@ -24,6 +24,16 @@ namespace MS.Controllers
         }
 
         // API Endpoints
+        [Route("api/Exam/sessions")]
+        public IActionResult GetSessions()
+        {
+            var currentYear = DateTime.Now.Year;
+            var years = Enumerable.Range(2000, currentYear - 2000 + 1)
+                .Select(y => new { value = y.ToString(), text = y.ToString() })
+                .ToList();
+            return Json(years);
+        }
+
         [Route("api/Exam/courses")]
         public async Task<IActionResult> GetCourses([FromQuery] string degree)
         {
@@ -74,11 +84,16 @@ namespace MS.Controllers
         {
             try
             {
-                // Validate room capacity
+                // Validate room capacity and availability
                 var room = await _context.Rooms.FindAsync(request.RoomId);
                 if (room == null)
                 {
                     return BadRequest("Room not found");
+                }
+
+                if (room.IsBooked)
+                {
+                    return BadRequest("Room is already booked for another exam");
                 }
 
                 var students = await _context.Students
@@ -90,19 +105,26 @@ namespace MS.Controllers
                     return BadRequest("Room capacity is less than number of students");
                 }
 
-                // Create random seating arrangement
+                // Mark room as booked
+                room.IsBooked = true;
+                _context.Rooms.Update(room);
+
+                // Create seating arrangement
+                var examSeatings = new List<ExamSeating>();
+                var rows = (int)Math.Ceiling(students.Count / 4.0); // 4 seats per row
                 var random = new Random();
                 var shuffledStudents = students.OrderBy(x => random.Next()).ToList();
-                var examSeatings = new List<ExamSeating>();
 
                 for (int i = 0; i < shuffledStudents.Count; i++)
                 {
+                    var row = i / 4 + 1;
+                    var seat = i % 4 + 1;
                     var seating = new ExamSeating
                     {
                         RoomId = room.Id,
                         CourseId = request.CourseId,
                         StudentId = shuffledStudents[i].Id,
-                        SeatNumber = $"R{i / 4 + 1}S{i % 4 + 1}", // 4 seats per row
+                        SeatNumber = $"R{row}S{seat}", // Row and Seat number
                         ExamDate = request.ExamDate,
                         IsPresent = false
                     };
@@ -112,11 +134,11 @@ namespace MS.Controllers
                 _context.ExamSeatings.AddRange(examSeatings);
                 await _context.SaveChangesAsync();
 
-                return Ok(true);
+                return Ok(new { success = true, message = "Exam seating arranged successfully!" });
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new { success = false, message = ex.Message });
             }
         }
 
@@ -124,17 +146,53 @@ namespace MS.Controllers
         [Route("api/Exam/seating-plan-pdf")]
         public async Task<IActionResult> GetSeatingPlanPdf([FromQuery] int examId)
         {
-            var examSeatings = await _context.ExamSeatings
+            var examSeating = await _context.ExamSeatings
                 .Include(e => e.Student)
                 .Include(e => e.Course)
                 .Include(e => e.Room)
-                .Where(e => e.Id == examId)
-                .OrderBy(e => e.SeatNumber)
-                .ToListAsync();
+                .FirstOrDefaultAsync(e => e.Id == examId);
 
-            if (!examSeatings.Any())
+            if (examSeating == null)
             {
                 return NotFound("No seating arrangement found");
+            }
+
+            // Get all seatings for this exam (same course, room, and date)
+            var examSeatings = await _context.ExamSeatings
+                .Include(e => e.Student)
+                .Where(e => e.CourseId == examSeating.CourseId && 
+                           e.RoomId == examSeating.RoomId && 
+                           e.ExamDate == examSeating.ExamDate)
+                .ToListAsync();
+
+            // Get the room capacity
+            int roomCapacity = examSeating.Room.Capacity;
+            int columns = 4;
+            int rows = (int)Math.Ceiling(roomCapacity / (double)columns);
+
+            // Randomly assign students to seats (use seat number order if already assigned)
+            var random = new Random();
+            var shuffledSeatings = examSeatings.OrderBy(e => e.SeatNumber).ToList();
+            if (shuffledSeatings.Any(s => string.IsNullOrEmpty(s.SeatNumber)))
+            {
+                // If seat numbers are not assigned, assign randomly
+                var shuffledStudents = examSeatings.Select(e => e.Student).OrderBy(x => random.Next()).ToList();
+                shuffledSeatings.Clear();
+                for (int i = 0; i < shuffledStudents.Count; i++)
+                {
+                    var row = i / columns + 1;
+                    var seat = i % columns + 1;
+                    var seating = new ExamSeating
+                    {
+                        RoomId = examSeating.RoomId,
+                        CourseId = examSeating.CourseId,
+                        StudentId = shuffledStudents[i].Id,
+                        Student = shuffledStudents[i],
+                        SeatNumber = $"R{row}S{seat}",
+                        ExamDate = examSeating.ExamDate
+                    };
+                    shuffledSeatings.Add(seating);
+                }
             }
 
             using (MemoryStream ms = new MemoryStream())
@@ -143,33 +201,63 @@ namespace MS.Controllers
                 PdfWriter writer = PdfWriter.GetInstance(document, ms);
                 document.Open();
 
-                // Add title
-                var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 18);
-                var title = new Paragraph($"Seating Plan - {examSeatings[0].Course.Name}", titleFont);
-                title.Alignment = Element.ALIGN_CENTER;
-                document.Add(title);
-                document.Add(new Paragraph($"Room: {examSeatings[0].Room.RoomNumber}"));
-                document.Add(new Paragraph($"Date: {examSeatings[0].ExamDate:dd/MM/yyyy}"));
+                // White Board at the top
+                var whiteBoardFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14);
+                var whiteBoard = new Paragraph("White Board", whiteBoardFont)
+                {
+                    Alignment = Element.ALIGN_CENTER
+                };
+                var whiteBoardCell = new PdfPCell(new Phrase("White Board", whiteBoardFont))
+                {
+                    Colspan = columns,
+                    HorizontalAlignment = Element.ALIGN_CENTER,
+                    Padding = 8,
+                    Border = Rectangle.BOX
+                };
+                PdfPTable whiteBoardTable = new PdfPTable(columns);
+                whiteBoardTable.WidthPercentage = 80;
+                whiteBoardTable.AddCell(whiteBoardCell);
+                document.Add(whiteBoardTable);
                 document.Add(new Paragraph("\n"));
 
-                // Create seating table
-                PdfPTable table = new PdfPTable(4); // 4 columns
-                table.WidthPercentage = 100;
+                // Seating grid
+                PdfPTable seatTable = new PdfPTable(columns);
+                seatTable.WidthPercentage = 80;
+                seatTable.SpacingBefore = 10f;
+                seatTable.SpacingAfter = 10f;
 
-                foreach (var seating in examSeatings)
+                int seatIndex = 0;
+                for (int r = 0; r < rows; r++)
                 {
-                    var cell = new PdfPCell(new Phrase(
-                        $"Seat: {seating.SeatNumber}\n" +
-                        $"Roll No: {seating.Student.RollNumber}\n" +
-                        $"Name: {seating.Student.Name}"
-                    ));
-                    cell.Padding = 5;
-                    table.AddCell(cell);
+                    for (int c = 0; c < columns; c++)
+                    {
+                        if (seatIndex < shuffledSeatings.Count)
+                        {
+                            var s = shuffledSeatings[seatIndex];
+                            var cell = new PdfPCell(new Phrase($"{s.SeatNumber}\n{s.Student.RollNumber}", FontFactory.GetFont(FontFactory.HELVETICA, 10)))
+                            {
+                                FixedHeight = 40f,
+                                HorizontalAlignment = Element.ALIGN_CENTER,
+                                VerticalAlignment = Element.ALIGN_MIDDLE,
+                                Border = Rectangle.BOX
+                            };
+                            seatTable.AddCell(cell);
+                        }
+                        else if (seatIndex < roomCapacity)
+                        {
+                            // Empty seat
+                            var cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.HELVETICA, 10)))
+                            {
+                                FixedHeight = 40f,
+                                Border = Rectangle.BOX
+                            };
+                            seatTable.AddCell(cell);
+                        }
+                        seatIndex++;
+                    }
                 }
-
-                document.Add(table);
+                document.Add(seatTable);
                 document.Close();
-
                 return File(ms.ToArray(), "application/pdf", "seating_plan.pdf");
             }
         }
@@ -178,18 +266,27 @@ namespace MS.Controllers
         [Route("api/Exam/attendance-sheet-pdf")]
         public async Task<IActionResult> GetAttendanceSheetPdf([FromQuery] int examId)
         {
-            var examSeatings = await _context.ExamSeatings
+            var examSeating = await _context.ExamSeatings
                 .Include(e => e.Student)
                 .Include(e => e.Course)
                 .Include(e => e.Room)
-                .Where(e => e.Id == examId)
-                .OrderBy(e => e.Student.RollNumber)
-                .ToListAsync();
+                .FirstOrDefaultAsync(e => e.Id == examId);
 
-            if (!examSeatings.Any())
+            if (examSeating == null)
             {
                 return NotFound("No seating arrangement found");
             }
+
+            // Get all seatings for this exam (same course, room, and date)
+            var examSeatings = await _context.ExamSeatings
+                .Include(e => e.Student)
+                .Where(e => e.CourseId == examSeating.CourseId && 
+                           e.RoomId == examSeating.RoomId && 
+                           e.ExamDate == examSeating.ExamDate)
+                .ToListAsync();
+
+            // Use the same seat order as the seating plan
+            var seatOrder = examSeatings.OrderBy(e => e.SeatNumber).ToList();
 
             using (MemoryStream ms = new MemoryStream())
             {
@@ -199,34 +296,40 @@ namespace MS.Controllers
 
                 // Add title
                 var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 18);
-                var title = new Paragraph($"Attendance Sheet - {examSeatings[0].Course.Name}", titleFont);
-                title.Alignment = Element.ALIGN_CENTER;
+                var title = new Paragraph($"Attendance Sheet - {examSeating.Course.Name}", titleFont)
+                {
+                    Alignment = Element.ALIGN_CENTER
+                };
                 document.Add(title);
-                document.Add(new Paragraph($"Room: {examSeatings[0].Room.RoomNumber}"));
-                document.Add(new Paragraph($"Date: {examSeatings[0].ExamDate:dd/MM/yyyy}"));
+                document.Add(new Paragraph($"Room: {examSeating.Room.RoomNumber}"));
+                document.Add(new Paragraph($"Date: {examSeating.ExamDate:dd/MM/yyyy}"));
                 document.Add(new Paragraph("\n"));
 
                 // Create attendance table
-                PdfPTable table = new PdfPTable(4); // Roll No, Name, Seat No, Signature
+                PdfPTable table = new PdfPTable(5); // Roll No, Name, Seat No, Signature, Remarks
                 table.WidthPercentage = 100;
+                table.SpacingBefore = 10f;
+                table.SpacingAfter = 10f;
 
                 // Add headers
-                table.AddCell("Roll No");
-                table.AddCell("Name");
-                table.AddCell("Seat No");
-                table.AddCell("Signature");
+                var headerFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12);
+                table.AddCell(new PdfPCell(new Phrase("Roll No", headerFont)));
+                table.AddCell(new PdfPCell(new Phrase("Name", headerFont)));
+                table.AddCell(new PdfPCell(new Phrase("Seat No", headerFont)));
+                table.AddCell(new PdfPCell(new Phrase("Signature", headerFont)));
+                table.AddCell(new PdfPCell(new Phrase("Remarks", headerFont)));
 
-                foreach (var seating in examSeatings)
+                foreach (var seating in seatOrder)
                 {
                     table.AddCell(seating.Student.RollNumber);
                     table.AddCell(seating.Student.Name);
                     table.AddCell(seating.SeatNumber);
                     table.AddCell(""); // Empty cell for signature
+                    table.AddCell(""); // Empty cell for remarks
                 }
 
                 document.Add(table);
                 document.Close();
-
                 return File(ms.ToArray(), "application/pdf", "attendance_sheet.pdf");
             }
         }

@@ -2,16 +2,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MS.Data;
 using MS.Models;
+using Microsoft.Extensions.Logging;
 
 namespace MS.Controllers
 {
     public class CourseController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<CourseController> _logger;
 
-        public CourseController(ApplicationDbContext context)
+        public CourseController(ApplicationDbContext context, ILogger<CourseController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: Course
@@ -49,11 +52,37 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Code,Name,CreditHours")] Course course)
         {
+            _logger.LogInformation("Create action started. Course data: {@Course}", course);
+            
             if (ModelState.IsValid)
             {
-                _context.Add(course);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.Add(course);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Course created successfully: {@Course}", course);
+                    
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = true });
+                    }
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating course: {@Course}", course);
+                    ModelState.AddModelError("", "An error occurred while saving the course. Please try again.");
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Model state is invalid. Errors: {@Errors}", 
+                    ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            }
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new { success = false, errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
             }
             return View(course);
         }

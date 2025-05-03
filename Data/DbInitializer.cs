@@ -1,4 +1,5 @@
 using MS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MS.Data
 {
@@ -6,17 +7,23 @@ namespace MS.Data
     {
         public static void Initialize(ApplicationDbContext context)
         {
-            // Delete and recreate the database
-            context.Database.EnsureDeleted();
-            context.Database.EnsureCreated();
+            // Apply any pending migrations
+            context.Database.Migrate();
+
+            // Check if any data exists
+            if (context.Courses.Any() || context.Rooms.Any() || context.Students.Any())
+            {
+                return; // Database has been seeded
+            }
 
             // Add sample courses
             var courses = new Course[]
             {
-                new Course { Code = "CS101", Name = "Introduction to Programming", CreditHours = 3 },
-                new Course { Code = "CS201", Name = "Data Structures", CreditHours = 4 },
-                new Course { Code = "CS301", Name = "Database Systems", CreditHours = 3 },
-                new Course { Code = "MTH101", Name = "Calculus I", CreditHours = 3 }
+                new Course { Code = "CS101", Name = "Introduction to Programming", CreditHours = 3, Degree = "CS" },
+                new Course { Code = "CS201", Name = "Data Structures", CreditHours = 4, Degree = "CS" },
+                new Course { Code = "CS301", Name = "Database Systems", CreditHours = 3, Degree = "CS" },
+                new Course { Code = "SE101", Name = "Software Engineering", CreditHours = 3, Degree = "SE" },
+                new Course { Code = "SE201", Name = "Software Design", CreditHours = 4, Degree = "SE" }
             };
             context.Courses.AddRange(courses);
             context.SaveChanges();
@@ -35,57 +42,47 @@ namespace MS.Data
             // Add sample students
             var students = new Student[]
             {
-                new Student {
+                new Student
+                {
                     Name = "John Doe",
-                    RollNumber = "2023-CS-01",
+                    Session = "2023",
+                    Degree = "CS",
                     Phone = "1234567890",
                     Email = "john@example.com",
                     Address = "123 Main St",
                     Age = 20,
                     Gender = "Male",
-                    CNIC = "12345-1234567-1",
-                    Session = "2023",
-                    Degree = "CS"
+                    CNIC = "12345-6789012-3",
+                    RollNumber = "CS-2023-001"
                 },
-                new Student {
+                new Student
+                {
                     Name = "Jane Smith",
-                    RollNumber = "2023-CS-02",
+                    Session = "2023",
+                    Degree = "CS",
                     Phone = "0987654321",
                     Email = "jane@example.com",
                     Address = "456 Oak St",
-                    Age = 19,
-                    Gender = "Female",
-                    CNIC = "12345-7654321-2",
-                    Session = "2023",
-                    Degree = "CS"
-                },
-                new Student {
-                    Name = "Alice Johnson",
-                    RollNumber = "2023-SE-01",
-                    Phone = "5555555555",
-                    Email = "alice@example.com",
-                    Address = "789 Pine St",
                     Age = 21,
                     Gender = "Female",
-                    CNIC = "12345-9876543-3",
-                    Session = "2023",
-                    Degree = "SE"
+                    CNIC = "98765-4321098-7",
+                    RollNumber = "CS-2023-002"
+                },
+                new Student
+                {
+                    Name = "Bob Johnson",
+                    Session = "2024",
+                    Degree = "SE",
+                    Phone = "5551234567",
+                    Email = "bob@example.com",
+                    Address = "789 Pine St",
+                    Age = 19,
+                    Gender = "Male",
+                    CNIC = "45678-9012345-6",
+                    RollNumber = "SE-2024-001"
                 }
             };
             context.Students.AddRange(students);
-            context.SaveChanges();
-
-            // Add sample exam seating
-            var examSeating = new ExamSeating
-            {
-                RoomId = rooms[0].Id,
-                CourseId = courses[0].Id,
-                StudentId = students[0].Id,
-                SeatNumber = "R1S1",
-                ExamDate = DateTime.Now.AddDays(7),
-                IsPresent = false
-            };
-            context.ExamSeatings.Add(examSeating);
             context.SaveChanges();
         }
     }

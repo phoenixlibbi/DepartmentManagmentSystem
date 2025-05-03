@@ -2,16 +2,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MS.Data;
 using MS.Models;
+using Microsoft.Extensions.Logging;
 
 namespace MS.Controllers
 {
     public class RoomController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<RoomController> _logger;
 
-        public RoomController(ApplicationDbContext context)
+        public RoomController(ApplicationDbContext context, ILogger<RoomController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: Room
@@ -49,11 +52,37 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("RoomNumber,Capacity,IsBooked")] Room room)
         {
+            _logger.LogInformation("Create action started. Room data: {@Room}", room);
+
             if (ModelState.IsValid)
             {
-                _context.Add(room);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _context.Add(room);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Room created successfully: {@Room}", room);
+
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = true });
+                    }
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating room: {@Room}", room);
+                    ModelState.AddModelError("", "An error occurred while saving the room. Please try again.");
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Model state is invalid. Errors: {@Errors}",
+                    ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            }
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new { success = false, errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
             }
             return View(room);
         }
@@ -112,6 +141,7 @@ namespace MS.Controllers
         {
             if (id == null)
             {
+                _logger.LogWarning("Delete action called with null id");
                 return NotFound();
             }
 
@@ -119,6 +149,7 @@ namespace MS.Controllers
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (room == null)
             {
+                _logger.LogWarning("Room not found for id: {Id}", id);
                 return NotFound();
             }
 
@@ -130,13 +161,26 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var room = await _context.Rooms.FindAsync(id);
-            if (room != null)
+            try
             {
+                var room = await _context.Rooms.FindAsync(id);
+                if (room == null)
+                {
+                    _logger.LogWarning("Room not found for deletion, id: {Id}", id);
+                    return NotFound();
+                }
+
                 _context.Rooms.Remove(room);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Room deleted successfully, id: {Id}", id);
+                return RedirectToAction(nameof(Index));
             }
-            return RedirectToAction(nameof(Index));
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting room with id: {Id}", id);
+                ModelState.AddModelError("", "An error occurred while deleting the room. Please try again.");
+                return View(await _context.Rooms.FindAsync(id));
+            }
         }
 
         private bool RoomExists(int id)

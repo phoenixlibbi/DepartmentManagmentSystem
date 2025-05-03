@@ -4,6 +4,11 @@ namespace MS.Models
 {
     public class Room
     {
+        public Room()
+        {
+            ExamSeatings = new List<ExamSeating>();
+        }
+
         [Key]
         public int Id { get; set; }
 
@@ -18,6 +23,6 @@ namespace MS.Models
         public bool IsBooked { get; set; }
 
         // Navigation property for exams
-        public virtual ICollection<ExamSeating> ExamSeatings { get; set; }
+        public virtual ICollection<ExamSeating>? ExamSeatings { get; set; }
     }
 } 
