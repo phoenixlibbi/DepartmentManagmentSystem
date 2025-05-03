@@ -4,6 +4,11 @@
     ViewData["Title"] = "Delete Room";
 }
 
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
 <div class="container">
     <h2>Delete Room</h2>
 

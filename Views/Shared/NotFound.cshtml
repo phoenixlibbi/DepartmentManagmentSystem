@@ -1,25 +1,22 @@
-﻿@model ErrorViewModel
 @{
-    ViewData["Title"] = "Error";
     Layout = null;
 }
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Server Error</title>
+    <title>Page Not Found</title>
     <style>
         body {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #e67e22 0%, #2c3e50 100%);
+            background: linear-gradient(135deg, #c0392b 0%, #2c3e50 100%);
             margin: 0;
         }
-        .error-card {
+        .notfound-card {
             background: #fff;
             border-radius: 16px;
             box-shadow: 0 8px 24px rgba(44,62,80,0.15);
@@ -27,24 +24,24 @@
             max-width: 400px;
             text-align: center;
         }
-        .error-icon {
+        .notfound-icon {
             font-size: 3rem;
-            color: #e67e22;
+            color: #c0392b;
             margin-bottom: 1rem;
         }
-        .error-title {
+        .notfound-title {
             font-weight: bold;
             color: #2c3e50;
             margin-bottom: 1rem;
             font-size: 1.5rem;
         }
-        .error-message {
+        .notfound-message {
             color: #555;
             font-size: 1.1rem;
             margin-bottom: 1.5rem;
         }
         .btn-home {
-            background: #e67e22;
+            background: #c0392b;
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -54,19 +51,19 @@
             text-decoration: none;
         }
         .btn-home:hover {
-            background: #d35400;
+            background: #a93226;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
-    <div class="error-card">
-        <div class="error-icon">
-            <i class="fas fa-exclamation-triangle"></i>
+    <div class="notfound-card">
+        <div class="notfound-icon">
+            <i class="fas fa-question-circle"></i>
         </div>
-        <div class="error-title">Server Error</div>
-        <div class="error-message">An unexpected error occurred. Please try again later.</div>
+        <div class="notfound-title">Page Not Found</div>
+        <div class="notfound-message">Sorry, the page you are looking for does not exist.</div>
         <a href="/" class="btn-home">Go to Home</a>
     </div>
 </body>
-</html>
+</html> 

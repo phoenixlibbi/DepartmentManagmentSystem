@@ -179,6 +179,7 @@ namespace MS.Controllers
         }
 
         // GET: User/Logout
+        [HttpPost]
         public IActionResult Logout()
         {
             HttpContext.Session.Clear();

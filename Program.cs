@@ -36,6 +36,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseExceptionHandler("/Shared/Error");
+    app.UseStatusCodePagesWithReExecute("/Shared/NotFound");
+}
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

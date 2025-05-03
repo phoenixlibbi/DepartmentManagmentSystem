@@ -177,6 +177,18 @@
                                 </li>
                             }
                         </ul>
+                        @if (isLoggedIn)
+                        {
+                            <ul class="navbar-nav ms-auto">
+                                <li class="nav-item">
+                                    <form asp-controller="User" asp-action="Logout" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-link nav-link" style="color: #fff; text-decoration: none;">
+                                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        }
                     </div>
                 </div>
             </nav>

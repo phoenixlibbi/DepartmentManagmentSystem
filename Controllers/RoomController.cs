@@ -194,11 +194,18 @@ namespace MS.Controllers
                 _logger.LogInformation("Room deleted successfully, id: {Id}", id);
                 return RedirectToAction(nameof(Index));
             }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Error deleting room with id: {Id}", id);
+                // Check for foreign key constraint violation
+                TempData["ErrorMessage"] = "Cannot delete this room because it is used in exam seatings.";
+                return RedirectToAction(nameof(Delete), new { id });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting room with id: {Id}", id);
-                ModelState.AddModelError("", "An error occurred while deleting the room. Please try again.");
-                return View(await _context.Rooms.FindAsync(id));
+                TempData["ErrorMessage"] = "An unexpected error occurred while deleting the room.";
+                return RedirectToAction(nameof(Delete), new { id });
             }
         }
 

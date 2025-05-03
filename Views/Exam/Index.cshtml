@@ -180,6 +180,9 @@
                                     <button class="btn btn-sm btn-success" onclick="downloadAttendanceSheet(${exam.id})">
                                         <i class="fas fa-download"></i> Attendance
                                     </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteExam(${exam.id})">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
                                 </td>
                             </tr>
                         `);
@@ -197,6 +200,29 @@
 
         function downloadAttendanceSheet(examId) {
             window.open(`/api/Exam/attendance-sheet-pdf?examId=${examId}`, '_blank');
+        }
+
+        function deleteExam(examId) {
+            if (confirm('Are you sure you want to delete this exam arrangement?')) {
+                $.ajax({
+                    url: '/api/Exam/delete-exam',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(examId),
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            loadExamList();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        var response = xhr.responseJSON;
+                        alert('Error: ' + (response?.message || 'Failed to delete exam'));
+                    }
+                });
+            }
         }
     </script>
 } 

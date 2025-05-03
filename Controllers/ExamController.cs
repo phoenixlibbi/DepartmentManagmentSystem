@@ -352,6 +352,35 @@ namespace MS.Controllers
                 return File(ms.ToArray(), "application/pdf", "attendance_sheet.pdf");
             }
         }
+
+        [HttpPost]
+        [Route("api/Exam/delete-exam")]
+        public async Task<IActionResult> DeleteExam([FromBody] int examId)
+        {
+            if (!IsExamAccessAllowed()) return AccessDenied();
+            try
+            {
+                var examSeating = await _context.ExamSeatings
+                    .FirstOrDefaultAsync(e => e.Id == examId);
+                if (examSeating == null)
+                {
+                    return NotFound(new { success = false, message = "Exam arrangement not found." });
+                }
+                // Find all seatings for this exam (same course, room, and date)
+                var examSeatings = await _context.ExamSeatings
+                    .Where(e => e.CourseId == examSeating.CourseId &&
+                                e.RoomId == examSeating.RoomId &&
+                                e.ExamDate == examSeating.ExamDate)
+                    .ToListAsync();
+                _context.ExamSeatings.RemoveRange(examSeatings);
+                await _context.SaveChangesAsync();
+                return Ok(new { success = true, message = "Exam arrangement deleted successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
     }
 
     public class ExamArrangementRequest
