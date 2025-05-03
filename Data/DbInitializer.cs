@@ -84,6 +84,17 @@ namespace MS.Data
             };
             context.Students.AddRange(students);
             context.SaveChanges();
+
+            // Seed Users
+            if (!context.Users.Any())
+            {
+                context.Users.AddRange(
+                    new User { Username = "superadmin", Password = "super123", Role = "SUPER_ADMIN" },
+                    new User { Username = "admin", Password = "admin123", Role = "ADMIN" },
+                    new User { Username = "clerk", Password = "clerk123", Role = "CLERK" }
+                );
+                context.SaveChanges();
+            }
         }
     }
 } 

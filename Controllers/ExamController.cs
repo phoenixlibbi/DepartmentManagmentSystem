@@ -17,9 +17,21 @@ namespace MS.Controllers
             _context = context;
         }
 
+        private bool IsExamAccessAllowed()
+        {
+            var role = HttpContext.Session.GetString("Role");
+            return role == "SUPER_ADMIN" || role == "ADMIN" || role == "CLERK";
+        }
+
+        private IActionResult AccessDenied()
+        {
+            return View("~/Views/Shared/AccessDenied.cshtml");
+        }
+
         // GET: Exam
         public IActionResult Index()
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             return View();
         }
 
@@ -27,6 +39,7 @@ namespace MS.Controllers
         [Route("api/Exam/sessions")]
         public IActionResult GetSessions()
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             var currentYear = DateTime.Now.Year;
             var years = Enumerable.Range(2000, currentYear - 2000 + 1)
                 .Select(y => new { value = y.ToString(), text = y.ToString() })
@@ -37,6 +50,7 @@ namespace MS.Controllers
         [Route("api/Exam/courses")]
         public async Task<IActionResult> GetCourses([FromQuery] string degree)
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             var courses = await _context.Courses
                 .Where(c => c.Code.StartsWith(degree))
                 .Select(c => new { id = c.Id, code = c.Code, name = c.Name })
@@ -48,6 +62,7 @@ namespace MS.Controllers
         [Route("api/Exam/rooms")]
         public async Task<IActionResult> GetRooms()
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             var rooms = await _context.Rooms
                 .Where(r => !r.IsBooked)
                 .Select(r => new { id = r.Id, roomNumber = r.RoomNumber, capacity = r.Capacity })
@@ -59,6 +74,7 @@ namespace MS.Controllers
         [Route("api/Exam/list")]
         public async Task<IActionResult> GetExamList()
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             var exams = await _context.ExamSeatings
                 .Include(e => e.Course)
                 .Include(e => e.Room)
@@ -82,6 +98,7 @@ namespace MS.Controllers
         [Route("api/Exam/arrange-seating")]
         public async Task<IActionResult> ArrangeSeating([FromBody] ExamArrangementRequest request)
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             try
             {
                 // Validate room capacity and availability
@@ -146,6 +163,7 @@ namespace MS.Controllers
         [Route("api/Exam/seating-plan-pdf")]
         public async Task<IActionResult> GetSeatingPlanPdf([FromQuery] int examId)
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             var examSeating = await _context.ExamSeatings
                 .Include(e => e.Student)
                 .Include(e => e.Course)
@@ -266,6 +284,7 @@ namespace MS.Controllers
         [Route("api/Exam/attendance-sheet-pdf")]
         public async Task<IActionResult> GetAttendanceSheetPdf([FromQuery] int examId)
         {
+            if (!IsExamAccessAllowed()) return AccessDenied();
             var examSeating = await _context.ExamSeatings
                 .Include(e => e.Student)
                 .Include(e => e.Course)

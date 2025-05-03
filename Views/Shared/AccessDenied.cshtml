@@ -1,0 +1,54 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Access Denied</title>
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #e74c3c 0%, #2c3e50 100%);
+            margin: 0;
+        }
+        .denied-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(44,62,80,0.15);
+            padding: 2.5rem 2rem 2rem 2rem;
+            max-width: 400px;
+            text-align: center;
+        }
+        .denied-icon {
+            font-size: 3rem;
+            color: #e74c3c;
+            margin-bottom: 1rem;
+        }
+        .denied-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        .denied-message {
+            color: #555;
+            font-size: 1.1rem;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+</head>
+<body>
+    <div class="denied-card">
+        <div class="denied-icon">
+            <i class="fas fa-ban"></i>
+        </div>
+        <div class="denied-title">Access Denied</div>
+        <div class="denied-message">You do not have permission to view this page.</div>
+    </div>
+</body>
+</html> 

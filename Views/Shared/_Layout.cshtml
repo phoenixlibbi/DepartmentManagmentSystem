@@ -1,4 +1,10 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var isLoginPage = string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "User", System.StringComparison.OrdinalIgnoreCase)
+        && string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "Login", System.StringComparison.OrdinalIgnoreCase);
+    var userRole = Context.Session.GetString("Role");
+    var isLoggedIn = !string.IsNullOrEmpty(userRole);
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -98,55 +104,97 @@
     </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-dark">
-            <div class="container">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                    <i class="fas fa-graduation-cap me-2"></i>DMS
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Student" asp-action="Index">
-                                <i class="fas fa-user-graduate me-1"></i>Students
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Course" asp-action="Index">
-                                <i class="fas fa-book me-1"></i>Courses
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Room" asp-action="Index">
-                                <i class="fas fa-door-open me-1"></i>Rooms
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Exam" asp-action="Index">
-                                <i class="fas fa-tasks me-1"></i>Exam Management
-                            </a>
-                        </li>
-                    </ul>
+    @if (!isLoginPage)
+    {
+        <header>
+            <nav class="navbar navbar-expand-sm navbar-dark">
+                <div class="container">
+                    <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                        <i class="fas fa-graduation-cap me-2"></i>DMS
+                    </a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                        <ul class="navbar-nav flex-grow-1">
+                            @if (isLoggedIn && userRole == "SUPER_ADMIN")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Student" asp-action="Index">
+                                        <i class="fas fa-user-graduate me-1"></i>Students
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Course" asp-action="Index">
+                                        <i class="fas fa-book me-1"></i>Courses
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Room" asp-action="Index">
+                                        <i class="fas fa-door-open me-1"></i>Rooms
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Exam" asp-action="Index">
+                                        <i class="fas fa-tasks me-1"></i>Exam Management
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="User" asp-action="Index">
+                                        <i class="fas fa-users-cog me-1"></i>User Management
+                                    </a>
+                                </li>
+                            }
+                            else if (isLoggedIn && userRole == "ADMIN")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Student" asp-action="Index">
+                                        <i class="fas fa-user-graduate me-1"></i>Students
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Course" asp-action="Index">
+                                        <i class="fas fa-book me-1"></i>Courses
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Room" asp-action="Index">
+                                        <i class="fas fa-door-open me-1"></i>Rooms
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Exam" asp-action="Index">
+                                        <i class="fas fa-tasks me-1"></i>Exam Management
+                                    </a>
+                                </li>
+                            }
+                            else if (isLoggedIn && userRole == "CLERK")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Exam" asp-action="Index">
+                                        <i class="fas fa-tasks me-1"></i>Exam Management
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
                 </div>
-            </div>
-        </nav>
-    </header>
-
-        <main role="main" class="pb-3">
+            </nav>
+        </header>
+    }
+    <main role="main" class="pb-3">
         <div class="container mt-4">
             @RenderBody()
         </div>
-        </main>
-
-    <footer class="footer text-center">
-        <div class="container">
-            <span>&copy; @DateTime.Now.Year - Department Management System</span>
-        </div>
-    </footer>
-
+    </main>
+    @if (!isLoginPage)
+    {
+        <footer class="footer text-center">
+            <div class="container">
+                <span>&copy; @DateTime.Now.Year - Department Management System</span>
+            </div>
+        </footer>
+    }
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

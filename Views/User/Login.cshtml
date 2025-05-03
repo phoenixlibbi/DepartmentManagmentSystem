@@ -1,0 +1,116 @@
+@model MS.Models.LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    body {
+        min-height: 100vh;
+        min-width: 100vw;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .login-card {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 12px 32px rgba(44,62,80,0.18);
+        padding: 2.5rem 2.5rem 2rem 2.5rem;
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: fadeIn 0.7s cubic-bezier(.4,0,.2,1);
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .login-icon {
+        font-size: 3.5rem;
+        color: #3498db;
+        margin-bottom: 1.2rem;
+    }
+    .login-title {
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 2rem;
+        font-size: 1.7rem;
+        letter-spacing: 1px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #2c3e50;
+        margin-bottom: 0.3rem;
+        text-align: left;
+        width: 100%;
+    }
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+        box-shadow: none;
+        transition: border-color 0.2s;
+    }
+    .form-control:focus {
+        border-color: #3498db;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
+    }
+    .btn-primary {
+        width: 100%;
+        font-weight: bold;
+        padding: 0.85rem;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        background: linear-gradient(90deg, #3498db 0%, #2980b9 100%);
+        border: none;
+        box-shadow: 0 2px 8px rgba(52,152,219,0.08);
+        transition: background 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary:hover {
+        background: linear-gradient(90deg, #2980b9 0%, #3498db 100%);
+        box-shadow: 0 4px 16px rgba(52,152,219,0.13);
+    }
+    .text-danger {
+        font-size: 0.97rem;
+    }
+</style>
+<div class="login-card">
+    <div class="login-icon">
+        <i class="fas fa-user-lock"></i>
+    </div>
+    <h2 class="login-title">Department Management Login</h2>
+    <form asp-action="Login" method="post" style="width:100%">
+        <div class="form-group mb-3">
+            <label asp-for="Username" class="form-label"></label>
+            <input asp-for="Username" class="form-control" placeholder="Enter username" autocomplete="username" />
+            <span asp-validation-for="Username" class="text-danger"></span>
+        </div>
+        <div class="form-group mb-3">
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" class="form-control" type="password" placeholder="Enter password" autocomplete="current-password" />
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+        <div class="form-group mb-3">
+            <span asp-validation-summary="All" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+</div>
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+} 

@@ -14,15 +14,28 @@ namespace MS.Controllers
             _context = context;
         }
 
+        private bool IsAdminOrSuperAdmin()
+        {
+            var role = HttpContext.Session.GetString("Role");
+            return role == "SUPER_ADMIN" || role == "ADMIN";
+        }
+
+        private IActionResult AccessDenied()
+        {
+            return View("~/Views/Shared/AccessDenied.cshtml");
+        }
+
         // GET: Student
         public async Task<IActionResult> Index()
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             return View(await _context.Students.ToListAsync());
         }
 
         // GET: Student/Details/5
         public async Task<IActionResult> Details(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -41,6 +54,7 @@ namespace MS.Controllers
         // GET: Student/Create
         public IActionResult Create()
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             return View();
         }
 
@@ -49,6 +63,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name,Session,Degree,Phone,Email,Address,Age,Gender,CNIC,RollNumber")] Student student)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             try
             {
                 if (ModelState.IsValid)
@@ -98,6 +113,7 @@ namespace MS.Controllers
         // GET: Student/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -116,6 +132,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name,RollNumber,Phone,Email,Address,Age,Gender,CNIC,Session,Degree")] Student student)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id != student.Id)
             {
                 return NotFound();
@@ -147,6 +164,7 @@ namespace MS.Controllers
         // GET: Student/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -167,6 +185,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             var student = await _context.Students.FindAsync(id);
             if (student != null)
             {
@@ -181,6 +200,7 @@ namespace MS.Controllers
         [Route("api/[controller]")]
         public async Task<ActionResult<IEnumerable<Student>>> GetStudents()
         {
+            if (!IsAdminOrSuperAdmin()) return Forbid();
             return await _context.Students.ToListAsync();
         }
 
@@ -188,6 +208,7 @@ namespace MS.Controllers
         [Route("api/[controller]/filter")]
         public async Task<ActionResult<IEnumerable<Student>>> FilterStudents([FromQuery] string? session, [FromQuery] string? degree)
         {
+            if (!IsAdminOrSuperAdmin()) return Forbid();
             var query = _context.Students.AsQueryable();
 
             if (!string.IsNullOrEmpty(session))

@@ -17,15 +17,28 @@ namespace MS.Controllers
             _logger = logger;
         }
 
+        private bool IsAdminOrSuperAdmin()
+        {
+            var role = HttpContext.Session.GetString("Role");
+            return role == "SUPER_ADMIN" || role == "ADMIN";
+        }
+
+        private IActionResult AccessDenied()
+        {
+            return View("~/Views/Shared/AccessDenied.cshtml");
+        }
+
         // GET: Room
         public async Task<IActionResult> Index()
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             return View(await _context.Rooms.ToListAsync());
         }
 
         // GET: Room/Details/5
         public async Task<IActionResult> Details(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -44,6 +57,7 @@ namespace MS.Controllers
         // GET: Room/Create
         public IActionResult Create()
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             return View();
         }
 
@@ -52,6 +66,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("RoomNumber,Capacity,IsBooked")] Room room)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             _logger.LogInformation("Create action started. Room data: {@Room}", room);
 
             if (ModelState.IsValid)
@@ -90,6 +105,7 @@ namespace MS.Controllers
         // GET: Room/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -108,6 +124,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,RoomNumber,Capacity,IsBooked")] Room room)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id != room.Id)
             {
                 return NotFound();
@@ -139,6 +156,7 @@ namespace MS.Controllers
         // GET: Room/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 _logger.LogWarning("Delete action called with null id");
@@ -161,6 +179,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             try
             {
                 var room = await _context.Rooms.FindAsync(id);

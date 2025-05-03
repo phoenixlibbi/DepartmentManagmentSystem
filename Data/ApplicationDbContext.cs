@@ -14,6 +14,7 @@ namespace MS.Data
         public DbSet<Course> Courses { get; set; }
         public DbSet<Room> Rooms { get; set; }
         public DbSet<ExamSeating> ExamSeatings { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

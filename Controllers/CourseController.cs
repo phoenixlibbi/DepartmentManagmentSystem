@@ -17,15 +17,27 @@ namespace MS.Controllers
             _logger = logger;
         }
 
+        private bool IsAdminOrSuperAdmin()
+        {
+            var role = HttpContext.Session.GetString("Role");
+            return role == "SUPER_ADMIN" || role == "ADMIN";
+        }
+        private IActionResult AccessDenied()
+        {
+            return View("~/Views/Shared/AccessDenied.cshtml");
+        }
+
         // GET: Course
         public async Task<IActionResult> Index()
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             return View(await _context.Courses.ToListAsync());
         }
 
         // GET: Course/Details/5
         public async Task<IActionResult> Details(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -44,6 +56,7 @@ namespace MS.Controllers
         // GET: Course/Create
         public IActionResult Create()
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             return View();
         }
 
@@ -52,6 +65,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Code,Name,CreditHours")] Course course)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             _logger.LogInformation("Create action started. Course data: {@Course}", course);
             
             if (ModelState.IsValid)
@@ -90,6 +104,7 @@ namespace MS.Controllers
         // GET: Course/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -108,6 +123,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Code,Name,CreditHours")] Course course)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id != course.Id)
             {
                 return NotFound();
@@ -139,6 +155,7 @@ namespace MS.Controllers
         // GET: Course/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
@@ -159,6 +176,7 @@ namespace MS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             var course = await _context.Courses.FindAsync(id);
             if (course != null)
             {
@@ -173,6 +191,7 @@ namespace MS.Controllers
         [Route("api/[controller]")]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
         {
+            if (!IsAdminOrSuperAdmin()) return Forbid();
             return await _context.Courses.ToListAsync();
         }
 
