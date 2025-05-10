@@ -61,7 +61,7 @@ namespace MS.Controllers
         // POST: Student/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Session,Degree,Phone,Email,Address,Age,Gender,CNIC,RollNumber")] Student student)
+        public async Task<IActionResult> Create([Bind("Id,Name,Session,Degree,Section,Phone,Email,Address,Age,Gender,CNIC,RollNumber")] Student student)
         {
             if (!IsAdminOrSuperAdmin()) return AccessDenied();
             try

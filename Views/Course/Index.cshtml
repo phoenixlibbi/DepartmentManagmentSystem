@@ -1,21 +1,37 @@
 @model IEnumerable<MS.Models.Course>
 
 @{
-    ViewData["Title"] = "Courses";
+    ViewData["Title"] = "Index";
 }
 
-<div class="container">
-    <h2>Courses</h2>
+<h1>Courses</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
     <p>
         <a asp-action="Create" class="btn btn-primary">Create New</a>
     </p>
-
-    <table class="table table-striped">
+<table class="table">
         <thead>
             <tr>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Credit Hours</th>
+            <th>@Html.DisplayNameFor(model => model.Name)</th>
+            <th>@Html.DisplayNameFor(model => model.Code)</th>
+            <th>@Html.DisplayNameFor(model => model.CreditHours)</th>
+            <th>@Html.DisplayNameFor(model => model.Degree)</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -23,16 +39,58 @@
             @foreach (var item in Model)
             {
                 <tr>
-                    <td>@item.Code</td>
-                    <td>@item.Name</td>
-                    <td>@item.CreditHours</td>
+                <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                <td>@Html.DisplayFor(modelItem => item.Code)</td>
+                <td>@Html.DisplayFor(modelItem => item.CreditHours)</td>
+                <td>@Html.DisplayFor(modelItem => item.Degree)</td>
                     <td>
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
-                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Details</a>
-                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Edit</a>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete(@item.Id)">Delete</button>
+                    <form id="deleteForm-@item.Id" asp-action="Delete" asp-route-id="@item.Id" method="post" style="display: none;">
+                        @Html.AntiForgeryToken()
+                    </form>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-</div> 
+
+@section Scripts {
+    <script>
+        function confirmDelete(id) {
+            if (confirm('Are you sure you want to delete this course?')) {
+                // Submit the form
+                document.getElementById('deleteForm-' + id).submit();
+                
+                // Show loading state
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = 'Deleting...';
+                button.disabled = true;
+                
+                // Force page reload after a short delay
+                setTimeout(function() {
+                    window.location.reload();
+                }, 500);
+            }
+        }
+
+        // Auto-dismiss alerts after 5 seconds
+        window.setTimeout(function() {
+            $(".alert").fadeTo(500, 0).slideUp(500, function(){
+                $(this).remove(); 
+            });
+        }, 5000);
+
+        // Check for success/error messages on page load
+        $(document).ready(function() {
+            if (document.querySelector('.alert')) {
+                // Force reload after showing the message
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            }
+        });
+    </script>
+} 

@@ -22,6 +22,12 @@ namespace MS.Models
 
         public DateTime ExamDate { get; set; }
 
+        [Required]
+        public TimeSpan ExamTime { get; set; }
+
+        [Required]
+        public int PaperTotalTime { get; set; } = 180; // Default 3 hours in minutes
+
         public bool IsPresent { get; set; }
 
         // Navigation properties

@@ -31,26 +31,43 @@ namespace MS.Controllers
         public async Task<IActionResult> Index()
         {
             if (!IsAdminOrSuperAdmin()) return AccessDenied();
-            return View(await _context.Courses.ToListAsync());
+            try
+            {
+                return View(await _context.Courses.ToListAsync());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving courses");
+                TempData["ErrorMessage"] = "An error occurred while retrieving courses. Please try again later.";
+                return View(new List<Course>());
+            }
         }
 
         // GET: Course/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id == null)
             {
                 return NotFound();
             }
 
-            var course = await _context.Courses
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (course == null)
+            try
             {
-                return NotFound();
-            }
+                var course = await _context.Courses
+                    .FirstOrDefaultAsync(m => m.Id == id);
+                if (course == null)
+                {
+                    return NotFound();
+                }
 
-            return View(course);
+                return View(course);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving course details for ID {CourseId}", id);
+                TempData["ErrorMessage"] = "An error occurred while retrieving course details. Please try again later.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // GET: Course/Create
@@ -63,42 +80,29 @@ namespace MS.Controllers
         // POST: Course/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Code,Name,CreditHours")] Course course)
+        public async Task<IActionResult> Create([Bind("Id,Name,Code,CreditHours,Degree")] Course course)
         {
             if (!IsAdminOrSuperAdmin()) return AccessDenied();
             _logger.LogInformation("Create action started. Course data: {@Course}", course);
             
-            if (ModelState.IsValid)
+            try
             {
-                try
+                if (ModelState.IsValid)
                 {
                     _context.Add(course);
                     await _context.SaveChangesAsync();
                     _logger.LogInformation("Course created successfully: {@Course}", course);
-                    
-                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                    {
-                        return Json(new { success = true });
-                    }
+                    TempData["SuccessMessage"] = "Course created successfully.";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error creating course: {@Course}", course);
-                    ModelState.AddModelError("", "An error occurred while saving the course. Please try again.");
-                }
+                return View(course);
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogWarning("Model state is invalid. Errors: {@Errors}", 
-                    ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                _logger.LogError(ex, "Error creating course");
+                TempData["ErrorMessage"] = "An error occurred while creating the course. Please try again.";
+                return View(course);
             }
-
-            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-            {
-                return Json(new { success = false, errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
-            }
-            return View(course);
         }
 
         // GET: Course/Edit/5
@@ -110,18 +114,27 @@ namespace MS.Controllers
                 return NotFound();
             }
 
-            var course = await _context.Courses.FindAsync(id);
-            if (course == null)
+            try
             {
-                return NotFound();
+                var course = await _context.Courses.FindAsync(id);
+                if (course == null)
+                {
+                    return NotFound();
+                }
+                return View(course);
             }
-            return View(course);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving course for edit with ID {CourseId}", id);
+                TempData["ErrorMessage"] = "An error occurred while retrieving the course. Please try again later.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // POST: Course/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Code,Name,CreditHours")] Course course)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Code,CreditHours,Degree")] Course course)
         {
             if (!IsAdminOrSuperAdmin()) return AccessDenied();
             if (id != course.Id)
@@ -129,27 +142,37 @@ namespace MS.Controllers
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            try
             {
-                try
+                if (ModelState.IsValid)
                 {
-                    _context.Update(course);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!CourseExists(course.Id))
+                    try
                     {
-                        return NotFound();
+                        _context.Update(course);
+                        await _context.SaveChangesAsync();
+                        TempData["SuccessMessage"] = "Course updated successfully.";
+                        return RedirectToAction(nameof(Index));
                     }
-                    else
+                    catch (DbUpdateConcurrencyException)
                     {
-                        throw;
+                        if (!CourseExists(course.Id))
+                        {
+                            return NotFound();
+                        }
+                        else
+                        {
+                            throw;
+                        }
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                return View(course);
             }
-            return View(course);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating course with ID {CourseId}", id);
+                TempData["ErrorMessage"] = "An error occurred while updating the course. Please try again.";
+                return View(course);
+            }
         }
 
         // GET: Course/Delete/5
@@ -161,14 +184,23 @@ namespace MS.Controllers
                 return NotFound();
             }
 
-            var course = await _context.Courses
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (course == null)
+            try
             {
-                return NotFound();
-            }
+                var course = await _context.Courses
+                    .FirstOrDefaultAsync(m => m.Id == id);
+                if (course == null)
+                {
+                    return NotFound();
+                }
 
-            return View(course);
+                return View(course);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving course for deletion with ID {CourseId}", id);
+                TempData["ErrorMessage"] = "An error occurred while retrieving the course. Please try again later.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // POST: Course/Delete/5
@@ -177,13 +209,43 @@ namespace MS.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             if (!IsAdminOrSuperAdmin()) return AccessDenied();
-            var course = await _context.Courses.FindAsync(id);
-            if (course != null)
+            try
             {
+                var course = await _context.Courses.FindAsync(id);
+                if (course == null)
+                {
+                    return NotFound();
+                }
+
+                // Check if there are any related exam seatings
+                var hasExamSeatings = await _context.ExamSeatings
+                    .AnyAsync(es => es.CourseId == id);
+
+                if (hasExamSeatings)
+                {
+                    TempData["ErrorMessage"] = "Cannot delete this course because it has associated exam seatings. Please delete the exam seatings first.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 _context.Courses.Remove(course);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Course deleted successfully.";
+                
+                // Force reload the page with updated data
+                return RedirectToAction(nameof(Index));
             }
-            return RedirectToAction(nameof(Index));
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database error while deleting course with ID {CourseId}", id);
+                TempData["ErrorMessage"] = "An error occurred while deleting the course. This course may have associated records that need to be deleted first.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error deleting course with ID {CourseId}", id);
+                TempData["ErrorMessage"] = "An unexpected error occurred. Please try again later.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // API Endpoints

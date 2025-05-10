@@ -20,6 +20,10 @@ namespace MS.Models
         public string Degree { get; set; }
 
         [Required]
+        [StringLength(1)]
+        public string Section { get; set; }
+
+        [Required]
         [Phone]
         [StringLength(15)]
         public string Phone { get; set; }

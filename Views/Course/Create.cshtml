@@ -9,25 +9,36 @@
 
     <div class="row">
         <div class="col-md-6">
-            <form asp-action="Create" asp-controller="Course" method="post" id="createCourseForm">
+            <form asp-action="Create" asp-controller="Course" method="post">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 
                 <div class="form-group mb-3">
                     <label asp-for="Code" class="control-label"></label>
-                    <input asp-for="Code" class="form-control" />
+                    <input asp-for="Code" class="form-control" required />
                     <span asp-validation-for="Code" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mb-3">
                     <label asp-for="Name" class="control-label"></label>
-                    <input asp-for="Name" class="form-control" />
+                    <input asp-for="Name" class="form-control" required />
                     <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mb-3">
                     <label asp-for="CreditHours" class="control-label"></label>
-                    <input asp-for="CreditHours" type="number" min="1" max="6" class="form-control" />
+                    <input asp-for="CreditHours" type="number" min="1" max="6" class="form-control" required />
                     <span asp-validation-for="CreditHours" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="Degree" class="control-label"></label>
+                    <select asp-for="Degree" class="form-control" required>
+                        <option value="">Select Degree</option>
+                        <option value="CS">Computer Science</option>
+                        <option value="SE">Software Engineering</option>
+                        <option value="IT">Information Technology</option>
+                    </select>
+                    <span asp-validation-for="Degree" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mt-3">
@@ -41,30 +52,4 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    <script>
-        $(document).ready(function() {
-            $("#createCourseForm").on("submit", function(e) {
-                e.preventDefault();
-                
-                var formData = $(this).serialize();
-                
-                $.ajax({
-                    url: '@Url.Action("Create", "Course")',
-                    type: 'POST',
-                    data: formData,
-                    success: function(result) {
-                        if (result.success) {
-                            window.location.href = '@Url.Action("Index", "Course")';
-                        } else {
-                            window.location.reload();
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error:", error);
-                        alert("An error occurred while creating the course. Please try again.");
-                    }
-                });
-            });
-        });
-    </script>
 } 

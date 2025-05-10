@@ -5,16 +5,19 @@ using MS.Models;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace MS.Controllers
 {
     public class ExamController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<ExamController> _logger;
 
-        public ExamController(ApplicationDbContext context)
+        public ExamController(ApplicationDbContext context, ILogger<ExamController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         private bool IsExamAccessAllowed()
@@ -37,14 +40,19 @@ namespace MS.Controllers
 
         // API Endpoints
         [Route("api/Exam/sessions")]
-        public IActionResult GetSessions()
+        public async Task<IActionResult> GetSessions()
         {
             if (!IsExamAccessAllowed()) return AccessDenied();
-            var currentYear = DateTime.Now.Year;
-            var years = Enumerable.Range(2000, currentYear - 2000 + 1)
-                .Select(y => new { value = y.ToString(), text = y.ToString() })
-                .ToList();
-            return Json(years);
+            
+            // Get distinct session years from students table
+            var sessions = await _context.Students
+                .Select(s => s.Session)
+                .Distinct()
+                .OrderByDescending(s => s)
+                .Select(s => new { value = s, text = s })
+                .ToListAsync();
+
+            return Json(sessions);
         }
 
         [Route("api/Exam/courses")]
@@ -52,7 +60,6 @@ namespace MS.Controllers
         {
             if (!IsExamAccessAllowed()) return AccessDenied();
             var courses = await _context.Courses
-                .Where(c => c.Code.StartsWith(degree))
                 .Select(c => new { id = c.Id, code = c.Code, name = c.Name })
                 .ToListAsync();
 
@@ -78,7 +85,7 @@ namespace MS.Controllers
             var exams = await _context.ExamSeatings
                 .Include(e => e.Course)
                 .Include(e => e.Room)
-                .GroupBy(e => new { e.CourseId, e.RoomId, e.ExamDate })
+                .GroupBy(e => new { e.CourseId, e.RoomId, e.ExamDate, e.ExamTime, e.PaperTotalTime })
                 .Select(g => new
                 {
                     id = g.First().Id,
@@ -86,12 +93,31 @@ namespace MS.Controllers
                     courseName = g.First().Course.Name,
                     roomNumber = g.First().Room.RoomNumber,
                     examDate = g.First().ExamDate,
+                    examTime = g.First().ExamTime.ToString(@"hh\:mm"),
+                    paperTotalTime = g.First().PaperTotalTime,
                     studentCount = g.Count()
                 })
                 .OrderByDescending(e => e.examDate)
                 .ToListAsync();
 
             return Json(exams);
+        }
+
+        [Route("api/Exam/sections")]
+        public async Task<IActionResult> GetSections([FromQuery] string session, [FromQuery] string degree)
+        {
+            if (!IsExamAccessAllowed()) return AccessDenied();
+            
+            // Get distinct sections from students table based on session and degree
+            var sections = await _context.Students
+                .Where(s => s.Session == session && s.Degree == degree)
+                .Select(s => s.Section)
+                .Distinct()
+                .OrderBy(s => s)
+                .Select(s => new { value = s, text = $"Section {s}" })
+                .ToListAsync();
+
+            return Json(sections);
         }
 
         [HttpPost]
@@ -101,30 +127,61 @@ namespace MS.Controllers
             if (!IsExamAccessAllowed()) return AccessDenied();
             try
             {
+                // Validate request
+                if (request == null)
+                {
+                    return BadRequest(new { success = false, message = "Invalid request data" });
+                }
+
+                if (string.IsNullOrEmpty(request.Session) || 
+                    string.IsNullOrEmpty(request.Degree) || 
+                    string.IsNullOrEmpty(request.Section) || 
+                    request.CourseId <= 0 || 
+                    request.RoomId <= 0)
+                {
+                    return BadRequest(new { success = false, message = "All fields are required" });
+                }
+
+                // Validate exam date and time
+                var examDateTime = request.ExamDate.Add(request.ExamTime);
+                if (examDateTime <= DateTime.Now)
+                {
+                    return BadRequest(new { success = false, message = "Exam date and time must be in the future" });
+                }
+
                 // Validate room capacity and availability
                 var room = await _context.Rooms.FindAsync(request.RoomId);
                 if (room == null)
                 {
-                    return BadRequest("Room not found");
+                    return BadRequest(new { success = false, message = "Room not found" });
                 }
 
-                if (room.IsBooked)
+                // Check if room is booked for the same date and time
+                var isRoomBooked = await _context.ExamSeatings
+                    .AnyAsync(e => e.RoomId == request.RoomId && 
+                                 e.ExamDate.Date == request.ExamDate.Date &&
+                                 e.ExamTime == request.ExamTime);
+
+                if (isRoomBooked)
                 {
-                    return BadRequest("Room is already booked for another exam");
+                    return BadRequest(new { success = false, message = "Room is already booked for another exam at this time" });
                 }
 
                 var students = await _context.Students
-                    .Where(s => s.Session == request.Session && s.Degree == request.Degree)
+                    .Where(s => s.Session == request.Session && 
+                               s.Degree == request.Degree && 
+                               s.Section == request.Section)
                     .ToListAsync();
+
+                if (!students.Any())
+                {
+                    return BadRequest(new { success = false, message = "No students found for the selected session, degree, and section" });
+                }
 
                 if (students.Count > room.Capacity)
                 {
-                    return BadRequest("Room capacity is less than number of students");
+                    return BadRequest(new { success = false, message = "Room capacity is less than number of students" });
                 }
-
-                // Mark room as booked
-                room.IsBooked = true;
-                _context.Rooms.Update(room);
 
                 // Create seating arrangement
                 var examSeatings = new List<ExamSeating>();
@@ -143,6 +200,8 @@ namespace MS.Controllers
                         StudentId = shuffledStudents[i].Id,
                         SeatNumber = $"R{row}S{seat}", // Row and Seat number
                         ExamDate = request.ExamDate,
+                        ExamTime = request.ExamTime,
+                        PaperTotalTime = request.PaperTotalTime,
                         IsPresent = false
                     };
                     examSeatings.Add(seating);
@@ -155,6 +214,7 @@ namespace MS.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error arranging exam seating");
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -304,8 +364,9 @@ namespace MS.Controllers
                            e.ExamDate == examSeating.ExamDate)
                 .ToListAsync();
 
-            // Use the same seat order as the seating plan
-            var seatOrder = examSeatings.OrderBy(e => e.SeatNumber).ToList();
+            // Randomize the seating order
+            var random = new Random();
+            var randomizedSeatings = examSeatings.OrderBy(x => random.Next()).ToList();
 
             using (MemoryStream ms = new MemoryStream())
             {
@@ -325,26 +386,28 @@ namespace MS.Controllers
                 document.Add(new Paragraph("\n"));
 
                 // Create attendance table
-                PdfPTable table = new PdfPTable(5); // Roll No, Name, Seat No, Signature, Remarks
+                PdfPTable table = new PdfPTable(5); // Roll No, Name, Seat No, Signature, Sheet Code
                 table.WidthPercentage = 100;
                 table.SpacingBefore = 10f;
                 table.SpacingAfter = 10f;
+                table.SetWidths(new float[] { 2f, 4f, 2f, 3f, 2f }); // Adjust column widths
 
                 // Add headers
                 var headerFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12);
-                table.AddCell(new PdfPCell(new Phrase("Roll No", headerFont)));
-                table.AddCell(new PdfPCell(new Phrase("Name", headerFont)));
-                table.AddCell(new PdfPCell(new Phrase("Seat No", headerFont)));
-                table.AddCell(new PdfPCell(new Phrase("Signature", headerFont)));
-                table.AddCell(new PdfPCell(new Phrase("Remarks", headerFont)));
+                table.AddCell(new PdfPCell(new Phrase("Roll No", headerFont)) { Padding = 8 });
+                table.AddCell(new PdfPCell(new Phrase("Name", headerFont)) { Padding = 8 });
+                table.AddCell(new PdfPCell(new Phrase("Seat No", headerFont)) { Padding = 8 });
+                table.AddCell(new PdfPCell(new Phrase("Signature", headerFont)) { Padding = 8 });
+                table.AddCell(new PdfPCell(new Phrase("Sheet Code", headerFont)) { Padding = 8 });
 
-                foreach (var seating in seatOrder)
+                // Add student rows with more padding
+                foreach (var seating in randomizedSeatings)
                 {
-                    table.AddCell(seating.Student.RollNumber);
-                    table.AddCell(seating.Student.Name);
-                    table.AddCell(seating.SeatNumber);
-                    table.AddCell(""); // Empty cell for signature
-                    table.AddCell(""); // Empty cell for remarks
+                    table.AddCell(new PdfPCell(new Phrase(seating.Student.RollNumber)) { Padding = 8 });
+                    table.AddCell(new PdfPCell(new Phrase(seating.Student.Name)) { Padding = 8 });
+                    table.AddCell(new PdfPCell(new Phrase(seating.SeatNumber)) { Padding = 8 });
+                    table.AddCell(new PdfPCell(new Phrase("")) { Padding = 8 }); // Empty cell for signature
+                    table.AddCell(new PdfPCell(new Phrase("")) { Padding = 8 }); // Empty cell for sheet code
                 }
 
                 document.Add(table);
@@ -387,8 +450,11 @@ namespace MS.Controllers
     {
         public string Session { get; set; }
         public string Degree { get; set; }
+        public string Section { get; set; }
         public int CourseId { get; set; }
         public int RoomId { get; set; }
         public DateTime ExamDate { get; set; }
+        public TimeSpan ExamTime { get; set; }
+        public int PaperTotalTime { get; set; } = 180; // Default 3 hours in minutes
     }
 } 

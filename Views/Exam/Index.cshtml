@@ -35,6 +35,12 @@
                             </select>
                         </div>
                         <div class="col-md-3">
+                            <label class="form-label">Section</label>
+                            <select class="form-select" id="section" required>
+                                <option value="">Select Section</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label">Course</label>
                             <select class="form-select" id="course" required>
                                 <option value="">Select Course</option>
@@ -48,7 +54,15 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Exam Date</label>
-                            <input type="date" class="form-control" id="examDate" required>
+                            <input type="date" class="form-control" id="examDate" required min="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Exam Time</label>
+                            <input type="time" class="form-control" id="examTime" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Paper Duration (minutes)</label>
+                            <input type="number" class="form-control" id="paperTotalTime" required min="30" max="240" value="180">
                         </div>
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary">
@@ -65,22 +79,24 @@
         <div class="col-md-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Recent Exam Arrangements</h5>
+                    <h5 class="mb-0">Exam List</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-striped" id="examTable">
                             <thead>
                                 <tr>
+                                    <th>Course Code</th>
                                     <th>Course</th>
                                     <th>Room</th>
                                     <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Duration</th>
                                     <th>Students</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="examList">
-                                <!-- Exam list will be populated dynamically -->
+                            <tbody>
                             </tbody>
                         </table>
                     </div>
@@ -93,22 +109,44 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            // Load available sessions
+            // Load sessions
             $.get('/api/Exam/sessions', function(sessions) {
-                $('#session').empty().append('<option value="">Select Session</option>');
                 sessions.forEach(function(session) {
-                    $('#session').append(`<option value="${session.value}">${session.text}</option>`);
+                    $('#session').append($('<option>', {
+                        value: session.value,
+                        text: session.text
+                    }));
                 });
             });
 
-            // Load courses when degree is selected
+            // Load courses when degree changes
             $('#degree').change(function() {
                 var degree = $(this).val();
                 if (degree) {
-                    $.get('/api/Exam/courses', { degree: degree }, function(courses) {
+                    $.get('/api/Exam/courses?degree=' + degree, function(courses) {
                         $('#course').empty().append('<option value="">Select Course</option>');
                         courses.forEach(function(course) {
-                            $('#course').append(`<option value="${course.id}">${course.code} - ${course.name}</option>`);
+                            $('#course').append($('<option>', {
+                                value: course.id,
+                                text: course.code + ' - ' + course.name
+                            }));
+                        });
+                    });
+                }
+            });
+
+            // Load sections when session and degree change
+            $('#session, #degree').change(function() {
+                var session = $('#session').val();
+                var degree = $('#degree').val();
+                if (session && degree) {
+                    $.get('/api/Exam/sections?session=' + session + '&degree=' + degree, function(sections) {
+                        $('#section').empty().append('<option value="">Select Section</option>');
+                        sections.forEach(function(section) {
+                            $('#section').append($('<option>', {
+                                value: section.value,
+                                text: section.text
+                            }));
                         });
                     });
                 }
@@ -116,94 +154,115 @@
 
             // Load available rooms
             $.get('/api/Exam/rooms', function(rooms) {
-                $('#room').empty().append('<option value="">Select Room</option>');
                 rooms.forEach(function(room) {
-                    $('#room').append(`<option value="${room.id}">${room.roomNumber} (Capacity: ${room.capacity})</option>`);
+                    $('#room').append($('<option>', {
+                        value: room.id,
+                        text: room.roomNumber + ' (Capacity: ' + room.capacity + ')'
+                    }));
                 });
             });
 
-            // Handle form submission
+            // Set minimum time for exam time input
+            $('#examDate').change(function() {
+                var selectedDate = new Date($(this).val());
+                var today = new Date();
+                if (selectedDate.toDateString() === today.toDateString()) {
+                    var currentTime = new Date().toTimeString().slice(0, 5);
+                    $('#examTime').attr('min', currentTime);
+                } else {
+                    $('#examTime').removeAttr('min');
+                }
+            });
+
+            // Form submission
             $('#arrangeExamForm').submit(function(e) {
                 e.preventDefault();
-                var data = {
+                
+                // Ensure examTime is in HH:mm:ss format
+                let examTime = $('#examTime').val();
+                if (examTime && examTime.length === 5) examTime += ':00';
+
+                // Ensure examDate is in yyyy-MM-dd format (input type="date" should already do this)
+                let examDate = $('#examDate').val();
+
+                var formData = {
                     session: $('#session').val(),
                     degree: $('#degree').val(),
+                    section: $('#section').val(),
                     courseId: $('#course').val(),
                     roomId: $('#room').val(),
-                    examDate: $('#examDate').val()
+                    examDate: examDate, // yyyy-MM-dd
+                    examTime: examTime, // HH:mm:ss
+                    paperTotalTime: parseInt($('#paperTotalTime').val())
                 };
 
                 $.ajax({
                     url: '/api/Exam/arrange-seating',
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify(data),
+                    data: JSON.stringify(formData),
                     success: function(response) {
                         if (response.success) {
-                            alert(response.message);
-                            loadExamList();
-                            // Reset form
+                            alert('Exam seating arranged successfully!');
+                            loadExams();
                             $('#arrangeExamForm')[0].reset();
-                            // Reload rooms to update availability
-                            $.get('/api/Exam/rooms', function(rooms) {
-                                $('#room').empty().append('<option value="">Select Room</option>');
-                                rooms.forEach(function(room) {
-                                    $('#room').append(`<option value="${room.id}">${room.roomNumber} (Capacity: ${room.capacity})</option>`);
-                                });
-                            });
                         } else {
                             alert('Error: ' + response.message);
                         }
                     },
                     error: function(xhr) {
-                        var response = xhr.responseJSON;
-                        alert('Error: ' + (response?.message || 'Failed to arrange seating'));
+                        alert('Error: ' + (xhr.responseJSON?.message || 'An error occurred'));
                     }
                 });
             });
 
-            // Load exam list
-            function loadExamList() {
+            // Load exams
+            function loadExams() {
                 $.get('/api/Exam/list', function(exams) {
-                    $('#examList').empty();
+                    var tbody = $('#examTable tbody');
+                    tbody.empty();
                     exams.forEach(function(exam) {
-                        $('#examList').append(`
-                            <tr>
-                                <td>${exam.courseCode} - ${exam.courseName}</td>
-                                <td>${exam.roomNumber}</td>
-                                <td>${new Date(exam.examDate).toLocaleDateString()}</td>
-                                <td>${exam.studentCount}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewSeatingPlan(${exam.id})">
-                                        <i class="fas fa-chair"></i> Seating Plan
-                                    </button>
-                                    <button class="btn btn-sm btn-success" onclick="downloadAttendanceSheet(${exam.id})">
-                                        <i class="fas fa-download"></i> Attendance
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteExam(${exam.id})">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </td>
-                            </tr>
-                        `);
+                        var row = $('<tr>');
+                        row.append($('<td>').text(exam.courseCode));
+                        row.append($('<td>').text(exam.courseCode + ' - ' + exam.courseName));
+                        row.append($('<td>').text(exam.roomNumber));
+                        row.append($('<td>').text(new Date(exam.examDate).toLocaleDateString()));
+                        row.append($('<td>').text(exam.examTime));
+                        row.append($('<td>').text(exam.paperTotalTime + ' minutes'));
+                        row.append($('<td>').text(exam.studentCount));
+                        
+                        var actions = $('<td>');
+                        actions.append($('<button>', {
+                            class: 'btn btn-info btn-sm me-2',
+                            text: 'Seating Plan',
+                            click: function() {
+                                window.open('/api/Exam/seating-plan-pdf?examId=' + exam.id, '_blank');
+                            }
+                        }));
+                        actions.append($('<button>', {
+                            class: 'btn btn-success btn-sm me-2',
+                            text: 'Attendance',
+                            click: function() {
+                                window.open('/api/Exam/attendance-sheet-pdf?examId=' + exam.id, '_blank');
+                            }
+                        }));
+                        actions.append($('<button>', {
+                            class: 'btn btn-danger btn-sm',
+                            text: 'Delete',
+                            click: function() {
+                                if (confirm('Are you sure you want to delete this exam?')) {
+                                    deleteExam(exam.id);
+                                }
+                            }
+                        }));
+                        row.append(actions);
+                        tbody.append(row);
                     });
                 });
             }
 
-            // Initial load
-            loadExamList();
-        });
-
-        function viewSeatingPlan(examId) {
-            window.open(`/api/Exam/seating-plan-pdf?examId=${examId}`, '_blank');
-        }
-
-        function downloadAttendanceSheet(examId) {
-            window.open(`/api/Exam/attendance-sheet-pdf?examId=${examId}`, '_blank');
-        }
-
-        function deleteExam(examId) {
-            if (confirm('Are you sure you want to delete this exam arrangement?')) {
+            // Delete exam
+            function deleteExam(examId) {
                 $.ajax({
                     url: '/api/Exam/delete-exam',
                     type: 'POST',
@@ -211,18 +270,20 @@
                     data: JSON.stringify(examId),
                     success: function(response) {
                         if (response.success) {
-                            alert(response.message);
-                            loadExamList();
+                            alert('Exam deleted successfully!');
+                            loadExams();
                         } else {
                             alert('Error: ' + response.message);
                         }
                     },
                     error: function(xhr) {
-                        var response = xhr.responseJSON;
-                        alert('Error: ' + (response?.message || 'Failed to delete exam'));
+                        alert('Error: ' + (xhr.responseJSON?.message || 'An error occurred'));
                     }
                 });
             }
-        }
+
+            // Initial load of exams
+            loadExams();
+        });
     </script>
 } 

@@ -1,25 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "D:\\eadProject\\MS\\MS.csproj": {}
+    "/Users/applea2141/Desktop/project/DepartmentManagmentSystem/DMS/MS.csproj": {}
   },
   "projects": {
-    "D:\\eadProject\\MS\\MS.csproj": {
+    "/Users/applea2141/Desktop/project/DepartmentManagmentSystem/DMS/MS.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\eadProject\\MS\\MS.csproj",
+        "projectUniqueName": "/Users/applea2141/Desktop/project/DepartmentManagmentSystem/DMS/MS.csproj",
         "projectName": "MS",
-        "projectPath": "D:\\eadProject\\MS\\MS.csproj",
-        "packagesPath": "C:\\Users\\Phoenix\\.nuget\\packages\\",
-        "outputPath": "D:\\eadProject\\MS\\obj\\",
+        "projectPath": "/Users/applea2141/Desktop/project/DepartmentManagmentSystem/DMS/MS.csproj",
+        "packagesPath": "/Users/applea2141/.nuget/packages/",
+        "outputPath": "/Users/applea2141/Desktop/project/DepartmentManagmentSystem/DMS/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Phoenix\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/applea2141/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "/usr/local/share/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -85,7 +86,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.408/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.406/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
